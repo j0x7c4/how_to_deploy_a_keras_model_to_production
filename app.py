@@ -1,86 +1,74 @@
-#our web app framework!
-
-#you could also generate a skeleton from scratch via
-#http://flask-appbuilder.readthedocs.io/en/latest/installation.html
-
-#Generating HTML from within Python is not fun, and actually pretty cumbersome because you have to do the
-#HTML escaping on your own to keep the application secure. Because of that Flask configures the Jinja2 template engine 
-#for you automatically.
-#requests are objects that flask handles (get set post, etc)
-from flask import Flask, render_template,request
-#scientific computing library for saving, reading, and resizing images
-from scipy.misc import imsave, imread, imresize
-#for matrix math
-import numpy as np
-#for importing our keras model
-import keras.models
-#for regular expressions, saves time dealing with string data
-import re
-
-#system level operations (like loading files)
-import sys 
-#for reading operating system data
+from flask import Flask, request, jsonify
 import os
-#tell our app where our saved model is
-sys.path.append(os.path.abspath("./model"))
-from load import * 
-#initalize our flask app
+
+from PIL import Image
+import numpy as np
+import io
+from keras.preprocessing.image import img_to_array
+from keras.applications import imagenet_utils
+from model.load_mobilenet_nima import *
+
+# initialize our flask app
 app = Flask(__name__)
-#global vars for easy reusability
+# global vars for easy reusability
 global model, graph
-#initialize these variables
+# initialize these variables
 model, graph = init()
 
-#decoding an image from base64 into raw representation
-def convertImage(imgData1):
-	imgstr = re.search(r'base64,(.*)',imgData1).group(1)
-	#print(imgstr)
-	with open('output.png','wb') as output:
-		output.write(imgstr.decode('base64'))
-	
+
+def prepare_image(image, target):
+    # if the image mode is not RGB, convert it
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
+    # resize the input image and preprocess it
+    image = image.resize(target)
+    image = img_to_array(image)
+    image = np.expand_dims(image, axis=0)
+    image = imagenet_utils.preprocess_input(image)
+
+    # return the processed image
+    return image
+
 
 @app.route('/')
 def index():
-	#initModel()
-	#render out pre-built HTML file right on the index page
-	return render_template("index.html")
+    return jsonify({"name": "lilyBot"})
 
-@app.route('/predict/',methods=['GET','POST'])
+
+@app.route('/predict', methods=['POST'])
 def predict():
-	#whenever the predict method is called, we're going
-	#to input the user drawn character as an image into the model
-	#perform inference, and return the classification
-	#get the raw data format of the image
-	imgData = request.get_data()
-	#encode it into a suitable format
-	convertImage(imgData)
-	print "debug"
-	#read the image into memory
-	x = imread('output.png',mode='L')
-	#compute a bit-wise inversion so black becomes white and vice versa
-	x = np.invert(x)
-	#make it the right size
-	x = imresize(x,(28,28))
-	#imshow(x)
-	#convert to a 4D tensor to feed into our model
-	x = x.reshape(1,28,28,1)
-	print "debug2"
-	#in our computation graph
-	with graph.as_default():
-		#perform the prediction
-		out = model.predict(x)
-		print(out)
-		print(np.argmax(out,axis=1))
-		print "debug3"
-		#convert the response to a string
-		response = np.array_str(np.argmax(out,axis=1))
-		return response	
-	
+    # calculate mean score for AVA dataset
+    def mean_score(scores):
+        si = np.arange(1, 11, 1)
+        mean = np.sum(scores * si)
+        return mean
+
+    # calculate standard deviation of scores for AVA dataset
+    def std_score(scores):
+        si = np.arange(1, 11, 1)
+        mean = mean_score(scores)
+        std = np.sqrt(np.sum(((si - mean) ** 2) * scores))
+        return std
+
+    data = {"success": False}
+    # ensure an image was properly uploaded to our endpoint
+    if request.method == "POST":
+        if request.files.get("image"):
+            # read the image in PIL format
+            image = request.files["image"].read()
+            image = Image.open(io.BytesIO(image))
+            image = prepare_image(image, target=(224, 224))
+            with graph.as_default():
+                preds = model.predict(image)
+                mean = mean_score(preds)
+                std = std_score(preds)
+            data["success"] = True
+            data["pred"] = {"mean": mean, "std": std}
+    return jsonify(data)
+
 
 if __name__ == "__main__":
-	#decide what port to run the app in
-	port = int(os.environ.get('PORT', 5000))
-	#run the app locally on the givn port
-	app.run(host='0.0.0.0', port=port)
-	#optional if we want to run in debugging mode
-	#app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    # app.run(debug=True)
+    app.run(host='0.0.0.0', port=port)
