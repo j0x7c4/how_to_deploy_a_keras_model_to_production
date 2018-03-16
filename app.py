@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 import io
 from keras.preprocessing.image import img_to_array
-from keras.applications import imagenet_utils
+from keras.applications.imagenet_utils import preprocess_input
 from model.load_mobilenet_nima import *
 
 # initialize our flask app
@@ -25,7 +25,7 @@ def prepare_image(image, target):
     image = image.resize(target)
     image = img_to_array(image)
     image = np.expand_dims(image, axis=0)
-    image = imagenet_utils.preprocess_input(image)
+    image = preprocess_input(image, mode='tf')
 
     # return the processed image
     return image
@@ -60,7 +60,7 @@ def predict():
             image = Image.open(io.BytesIO(image))
             image = prepare_image(image, target=(224, 224))
             with graph.as_default():
-                preds = model.predict(image)
+                preds = model.predict(image, batch_size=1, verbose=0)[0]
                 mean = mean_score(preds)
                 std = std_score(preds)
             data["success"] = True
