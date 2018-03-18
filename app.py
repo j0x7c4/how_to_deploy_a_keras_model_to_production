@@ -7,7 +7,8 @@ import io
 from keras.preprocessing.image import img_to_array
 from keras.applications.imagenet_utils import preprocess_input
 from model.load_mobilenet_nima import *
-
+import urllib, cStringIO
+import json
 # initialize our flask app
 app = Flask(__name__)
 # global vars for easy reusability
@@ -33,6 +34,7 @@ def prepare_image(image, target):
 
 @app.route('/')
 def index():
+    print "hello"
     return jsonify({"name": "lilyBot"})
 
 
@@ -54,10 +56,11 @@ def predict():
     data = {"success": False}
     # ensure an image was properly uploaded to our endpoint
     if request.method == "POST":
-        if request.files.get("image"):
+        body = json.loads(request.data)
+        if body.get("img"):
             # read the image in PIL format
-            image = request.files["image"].read()
-            image = Image.open(io.BytesIO(image))
+            img_url = body['img']
+            image = Image.open(io.BytesIO(urllib.urlopen(img_url).read()))
             image = prepare_image(image, target=(224, 224))
             with graph.as_default():
                 preds = model.predict(image, batch_size=1, verbose=0)[0]
