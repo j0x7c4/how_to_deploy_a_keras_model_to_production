@@ -4,7 +4,7 @@ from keras.layers import Dense, Dropout
 from keras.models import Model
 from keras.optimizers import Adam
 from keras import backend as K
-
+import config
 
 def earth_mover_loss(y_true, y_pred):
     cdf_ytrue = K.cumsum(y_true, axis=-1)
@@ -19,7 +19,7 @@ def init():
     x = Dense(10, activation='softmax')(x)
 
     model = Model(base_model.input, x)
-    model.load_weights('/home/jie/projects/neural-image-assessment/weights/mobilenet_weights.h5')
+    model.load_weights(config.KERAS_NIMA_MODEL_PATH)
 
     optimizer = Adam(lr=1e-3)
     model.compile(optimizer, loss=earth_mover_loss)
