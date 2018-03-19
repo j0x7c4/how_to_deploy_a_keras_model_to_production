@@ -18,10 +18,13 @@ Or deploy by gunicorn.
 
 ## Examples
 
-Replace the img url as you wish
+Replace the image url as you wish
 
 `curl -d '{"img":"http://pic1.ymatou.com/G02/shangou/M01/EA/27/CgvUBFjk5y-AN3vcAAFy-8IpYrs150_100_133_n_w_o.png"}' -H "Content-type:application/json" modelapi.xiabb.me/predict`
 
+Response is shown below
+
+```
 {
   "pred": {
     "mean": 5.367191106561222,
@@ -29,3 +32,7 @@ Replace the img url as you wish
   },
   "success": true
 }
+```
+
+## Reference paper
+[https://arxiv.org/abs/1709.05424]
