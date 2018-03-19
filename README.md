@@ -16,7 +16,16 @@ Or deploy by gunicorn.
 
 ```sh start.sh```
 
-## Credits
+## Examples
 
-The credits for this code go to [moinudeen](https://github.com/moinudeen). I've merely created a wrapper to get people started.
+Replace the img url as you wish
 
+`curl -d '{"img":"http://pic1.ymatou.com/G02/shangou/M01/EA/27/CgvUBFjk5y-AN3vcAAFy-8IpYrs150_100_133_n_w_o.png"}' -H "Content-type:application/json" modelapi.xiabb.me/predict`
+
+{
+  "pred": {
+    "mean": 5.367191106561222,
+    "std": 1.5243325473321467
+  },
+  "success": true
+}
