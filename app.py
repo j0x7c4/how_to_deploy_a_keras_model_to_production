@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import os
-
+from urllib import unquote_plus
 from PIL import Image
 import numpy as np
 import io
@@ -38,7 +38,7 @@ def index():
     return jsonify({"name": "lilyBot"})
 
 
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['POST', 'GET'])
 def predict():
     # calculate mean score for AVA dataset
     def mean_score(scores):
@@ -56,18 +56,22 @@ def predict():
     data = {"success": False}
     # ensure an image was properly uploaded to our endpoint
     if request.method == "POST":
+        # print "*****",request.data
         body = json.loads(request.data)
-        if body.get("img"):
-            # read the image in PIL format
-            img_url = body['img']
-            image = Image.open(io.BytesIO(urllib.urlopen(img_url).read()))
-            image = prepare_image(image, target=(224, 224))
-            with graph.as_default():
-                preds = model.predict(image, batch_size=1, verbose=0)[0]
-                mean = mean_score(preds)
-                std = std_score(preds)
-            data["success"] = True
-            data["pred"] = {"mean": mean, "std": std}
+        img_url = body.get("img")
+    elif request.method == "GET":
+        # print "******", request.args
+        img_url = unquote_plus(request.args.get('img'))
+    if img_url:
+        # read the image in PIL format
+        image = Image.open(io.BytesIO(urllib.urlopen(img_url).read()))
+        image = prepare_image(image, target=(224, 224))
+        with graph.as_default():
+            preds = model.predict(image, batch_size=1, verbose=0)[0]
+            mean = mean_score(preds)
+            std = std_score(preds)
+        data["success"] = True
+        data["pred"] = {"mean": mean, "std": std}
     return jsonify(data)
 
 
